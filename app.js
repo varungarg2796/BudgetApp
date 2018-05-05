@@ -13,6 +13,15 @@ var budgetController = (function(){
 		this.value = value;
 	}
 
+	//to calculate the total income and expense from the data array
+	var calculateTotal = function(type){
+		var sum = 0;
+		data.allItems[type].forEach(function(current){
+			sum = sum + current.value;
+		});
+		data.totals[type] = sum;
+	};
+
 	var data = {
 		allItems : {
 			exp : [],
@@ -22,7 +31,9 @@ var budgetController = (function(){
 		totals: {
 			exp: 0,
 			inc: 0
-		}
+		},
+		budget: 0 , 
+		percentage : -1
 	}
 
 	return {
@@ -52,8 +63,37 @@ var budgetController = (function(){
 			return newItem;
 		},
 
+		calculateBudget : function(){
+
+			//calculate total income and expenses
+			calculateTotal('exp');
+			calculateTotal('inc');
+
+			//calculate the budget : income -- expenses
+
+			data.budget = data.totals.inc - data.totals.exp;
+
+			//calculate the percentage of income  that we spent
+			if(data.totals.inc > 0){
+				data.percentage =  Math.round ((data.totals.exp / data.totals.inc) * 100);
+			}
+			else{
+				data.percentage = -1 //which means non existent
+			}
+		},
+
 		testing : function(){
 			console.log(data);
+		},
+
+		getBudget : function(){
+			return {                    // the final results to be passed to be used in controller.
+				budget : data.budget,
+				totalInc : data.totals.inc,
+				totalExp : data.totals.exp,
+				percentage : data.percentage
+
+			};
 		}
 	}
 
@@ -70,7 +110,11 @@ var UIcontroller = (function(){
 		inputValue : '.add__value',
 		inputBtn : '.add__btn',
 		incomeContainer : '.income__list',
-		expensesContainer : '.expenses__list'
+		expensesContainer : '.expenses__list',
+		budgetLabel : 'budget__value',
+		incomeLabel : 'budget__income--value',
+		expensesLabel : 'budget__expenses--value',
+		percentageLabel : 'budget__expenses--percentage'
 	}
 
 
@@ -80,7 +124,7 @@ var UIcontroller = (function(){
 			return{
 				type: document.querySelector(DOMStrings.inputType).value,
 				description : document.querySelector(DOMStrings.inputDescription).value,
-				inputValue : document.querySelector(DOMStrings.inputValue).value
+				inputValue : parseFloat(document.querySelector(DOMStrings.inputValue).value)
 			}
 		} , //when returning different methods, DO ADD A comma.
 
@@ -108,6 +152,18 @@ var UIcontroller = (function(){
 			//insert it into the dom
 			document.querySelector(element).insertAdjacentHTML('beforeend',newHtml);
 
+		},
+
+		clearFields : function(){
+			var fields, fieldsArr;
+
+			fields = document.querySelectorAll(DOMStrings.inputDescription + ',' +
+			DOMStrings.inputValue); //this returns a list. need to convert it to an array
+			fieldsArr = Array.prototype.slice.call(fields);
+			fieldsArr.forEach(function(current,index,array){
+				current.value = '';
+			});
+			fieldsArr[0].focus(); //focus back to description
 		}
 	}
 
@@ -129,26 +185,56 @@ var controller = (function(budgetCtr, UICtr){
 		});
 	};
 
+
+	var updateBudget = function(){
+
+		//1. Calculate the budget.
+
+		budgetController.calculateBudget();
+
+		//2. Return the Budget.
+
+		var budget = budgetController.getBudget();
+
+		//3. Display the budget on the UI
+		console.log(budget);
+
+
+	}
+
+
+
+
 	var ctrlAddItem = function(){
 
-		var input, newItem,addItem; //new item is an object heres
+		var input, newItem,addItem; //new item is an object here
+
+ 
 		// 1. Get the field input data
 		input = UICtr.getInput();
-		console.log(input);
-		console.log(input.type);
+			
 
-		// 2. Add the item to budget controller.
-		newItem = budgetCtr.addItem(input.type, input.description, input.inputValue);
-		console.log(newItem);
+		//will only run if description and numbers are legit.
 
 
-		// 3. Add the item to UI.
-		addItem = UICtr.addListItem(newItem, input.type);
+		if (input.description !=="" && !isNaN(input.inputValue) && input.inputValue >0 ){
+
+			// 2. Add the item to budget controller.
+			newItem = budgetCtr.addItem(input.type, input.description, input.inputValue);
+			//console.log(newItem);
 
 
-		// 4. Calculate the budget.
-		// 5. Display the budget on the UI.
+			// 3. Add the item to UI.
+			addItem = UICtr.addListItem(newItem, input.type);
 
+			// 4. Clear the fields
+			UICtr.clearFields();
+
+			// 5. Calculate and update budget according to the entry
+			updateBudget();
+
+		}	
+ 
 	}
 
 	return {
@@ -233,6 +319,21 @@ Steps-
 	--Returned an addListItem function to controller from UIcontroller. new methods used-
 	 .replace() and .insertAdjacentHTML(). 
 
+7) Clearing the input fields after an item has been added.
+
+	--Returned clearField function to controller from UIcontroller.
+
+8) Created an updateBudget(). Moved the caluclation of budget and dispaly of budget to updateBudget()
+	from ctrladdItem(). 
+	ParseFloat ed the inputValue so that we get a number
+	Also, added a condition that the values should be legit and if not, don't add it to UI.
+
+9)CalculateBudget calls calculateTotal. They both compute the budget,inc,exp and perc.
+These parameters are returned to the main by getBudget();
+
+The updateBudget(which is in controller) first calls the calculateBudget() and then calls the getBudget() to get
+the parameters in the form of an object. This all is done in updateBudget() which runs after an
+entry is made.
 
 */
 
