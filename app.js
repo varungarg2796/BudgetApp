@@ -540,6 +540,9 @@ entry is made.
 	(ii) Delete an item from BudgetController- 
 
 	(iii) Delete the item from UI- 
+
+12) Update the budgetController for after the elements are deleted. That is, recalculate the whole thing.
+s
 */
 
 
